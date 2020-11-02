@@ -43,19 +43,28 @@ conf = configparser.ConfigParser()
 conf.read('jtmap.conf')
 
 # If localhost is selected, then bind to local loopback only
-if conf.getboolean('JTmap','LOCALHOST'):
+if conf.getboolean('jtmap','LOCALHOST'):
     UDP_IP = "127.0.0.1"
 else:
     UDP_IP = "0.0.0.0"   # otherwise bind to all local ports
 UDP_PORT = conf.getint('jtmap','PORT')
 
-# TO-DO: check if these are present, if not use gridsquare.
-MY_LATITUDE = conf.getfloat('jtmap','LATITUDE')
-MY_LONGITUDE = conf.getfloat('jtmap','LONGITUDE')
+# Use latitude/longitude of present, otherwise use gridsquare reported in WSJT-X
+if conf.has_option('jtmap','LATITUDE'):
+    my_latitude = conf.getfloat('jtmap','LATITUDE')
+else:
+    my_latitude = None
+if conf.has_option('jtmap','LONGITUDE'):
+    my_longitude = conf.getfloat('jtmap','LONGITUDE')
+else:
+    my_longitude = None
 WEB_LOOKUP = conf.get('jtmap','WEB_LOOKUP')
 logging.info('Using lookup database: {}'.format(WEB_LOOKUP))
 LOGGING = conf.get('jtmap','LOG_LEVEL')
-DISTANCE_UNITS = conf.get('jtmap','DISTANCE_UNITS')
+if conf.has_option('jtmap','DISTANCE_UNITS'):
+    DISTANCE_UNITS = conf.get('jtmap','DISTANCE_UNITS')
+else:
+    DISTANCE_UNITS = 'miles'
 
 # Set logging level
 if LOGGING == 'debug':
@@ -107,7 +116,7 @@ while True:
         # Update tkinter GUI (run this periodically rather than using a blocking mainloop)
         window.update()
 
-    # Proceed only if a QSO is completed (indicated in header)
+    # Proceed only if a QSO is completed (indicated by byte in header)
     if data[11] != 0x0c:
         continue
     
@@ -125,8 +134,19 @@ while True:
     # Extract call from ADIF data
     callsign = qso['CALL']
     my_callsign = qso['STATION_CALLSIGN']
+    
+    # If no home station latitude/longitude was specified in conf file, 
+    # use center of my_gridsquare reported in WSJT-X to approximate my latitude/longitude
+    if my_latitude == None:
+        my_gridsquare = qso['MY_GRIDSQUARE']
+        my_latitude, my_longitude = get_latitude_longitude(my_gridsquare)
+        my_longitude += 0.5
+        my_latitude += 1.0
+    
+    # Use the remote station's gridsquare to get approximate latitude/longitude
+    # This will be refined if station is found in an online database.
     gridsquare = qso['GRIDSQUARE']
-    latitude, longitude = get_latitude_longitude(gridsquare)  # use the gridsquare to approximate latitude/longitude
+    latitude, longitude = get_latitude_longitude(gridsquare)
 
     # Lookup callsign in an online database
     logging.info('Looking up: '+callsign)
@@ -153,7 +173,6 @@ while True:
         if contact['hamdb']['callsign']['call'] == 'NOT_FOUND':
             logging.info('callsign {} not found in {}.'.format(callsign,WEB_LOOKUP))
             name = None
-
         else:  # Get contact details and a more accurate latitute/longitude
             callsign = contact['hamdb']['callsign']['call']
             name = contact['hamdb']['callsign']['fname'] + ' ' + contact['hamdb']['callsign']['name']
@@ -166,8 +185,14 @@ while True:
     logging.info('call: {}\nname: {}\nQTH: {}\nGridsquare: {}'.format(callsign,name,qth,gridsquare))
 
     # TO-DO: check units for distance between stations
-    distance = geopy.distance.distance((latitude, longitude), (MY_LATITUDE,MY_LONGITUDE)).km
-    logging.info("distance: {:.0f} km\n\n".format(distance))
+    if DISTANCE_UNITS == 'kilometers' or DISTANCE_UNITS == 'km':
+        distance = geopy.distance.distance((latitude, longitude), (my_latitude,my_longitude)).kilometers
+        units = 'km'
+        logging.info("distance: {:.0f} km\n\n".format(distance))
+    else:
+        distance = geopy.distance.distance((latitude, longitude), (my_latitude,my_longitude)).miles
+        units = 'miles'
+        logging.info("distance: {:.0f} miles\n\n".format(distance))
 
     # Plot communication on a map
 
@@ -183,7 +208,7 @@ while True:
     ax.set_title('WSJT-X QSO confirmed on {}'.format(date))
 
     # Zoom in on region of interest on map
-    ax.set_extent([min(longitude,MY_LONGITUDE)-5, max(longitude,MY_LONGITUDE)+5, min(latitude,MY_LATITUDE)-5, max(latitude,MY_LATITUDE)+5],crs=ccrs.PlateCarree())
+    ax.set_extent([min(longitude,my_longitude)-5, max(longitude,my_longitude)+5, min(latitude,my_latitude)-5, max(latitude,my_latitude)+5],crs=ccrs.PlateCarree())
 
     ax.add_feature(cartopy.feature.OCEAN)
     ax.add_feature(cartopy.feature.LAND, edgecolor='black')
@@ -192,25 +217,22 @@ while True:
 
     # show contact details in the text box if it was found in database
     if name != None:
-        contact_details = 'call: {}\nname: {}\n{}\ndistance: {:.0f} km'.format(callsign,name,qth,distance)
+        contact_details = 'call: {}\nname: {}\n{}\ndistance: {:.0f} {}'.format(callsign,name,qth,distance,units)
         plt.figtext(0.5, 0.00, contact_details, ha="center", fontsize=12, bbox={"facecolor":"white", 'edgecolor':'none', "alpha":0.5, "pad":5})
 
-    at_x, at_y = ax.projection.transform_point(MY_LONGITUDE, MY_LATITUDE, src_crs=ccrs.PlateCarree())
+    at_x, at_y = ax.projection.transform_point(my_longitude, my_latitude, src_crs=ccrs.PlateCarree())
     plt.annotate(my_callsign, xy=(at_x, at_y), color='green', ha='left', fontweight='bold')
 
     at_x, at_y = ax.projection.transform_point(longitude, latitude, src_crs=ccrs.PlateCarree())
     plt.annotate(callsign, xy=(at_x, at_y), color='green', ha='right', fontweight='bold')
 
-    plt.plot([MY_LONGITUDE, longitude], [MY_LATITUDE, latitude],
+    plt.plot([my_longitude, longitude], [my_latitude, latitude],
          color='blue', linewidth=2, marker='o', transform=ccrs.Geodetic())
 
     # This will draw and fit things nicely in the window
-    # Note: tight_layout() must be called after draw()!
+    # Note: tight_layout() must be called after draw()
     fig.canvas.draw()
     fig.tight_layout()
  
     #plt.ioff()   # Turning interactive mode off
     plt.show(block = False)
-
-    #plt.pause(3)
-
