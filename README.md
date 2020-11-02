@@ -8,7 +8,7 @@ Here are instructions for installing these dependencies on Win/OSX/Linux:
 ---
 ### For Linux
 
-Python ver. 3.x is required. To install dependencies, 
+Python version 3.x is required. To install dependencies, 
 type the following in a terminal:
 
 ```
@@ -32,29 +32,36 @@ pip3 install --upgrade certificates
 ---
 ### For Windows
 
+*NOTE: Unfortunately, it seems cartopy has had some issues installing on Windows
+which will prevent JTmap from working with Windows till this is resolved... 
+However, it may be possible to install these dependencies using Anaconda (not tested).*
+
 First, download Python ver. 3.x
 Be sure to click "Add Python to PATH" during install so it can be
 used easily run in a terminal window.
 
 Open a terminal window and at the command prompt, type the following:
 
-`pip3 install adif_io geopy matplotlib scipy`
-
-*NOTE: Unfortunately, it seems cartopy has had some issues installing on Windows...
-If this is the case, one could try installing these dependencies using Anaconda.*
+`pip3 install adif_io geopy matplotlib scipy cartopy`
 
 ---
 
 ## Setup
 
-For all platforms ensure that jtmap.py and jtmap.conf are placed in the same folder.
-The jtmap.conf file contains configuration information that you should setup before
-launching the program (if unsure, it should work fine using the defaults).
+To download the program folder from guthub, use the following command line:
 
-Launch the program using python as 
-follows:
+`git clone https://github.com/dschuurman/jtmap.git`
 
-`python3 jtmap.py`
+Next, enter the project folder and launch the program as follows:
+
+```
+cd jtmap
+python3 jtmap.py
+```
+
+Note that `jtmap.py` and `jtmap.conf` should be placed in the same folder.
+The jtmap.conf file contains configuration information that should be setup before
+launching the program (if unsure, it should work "out of the box" using the defaults).
 
 Configure WSJT-X so that the UDP server is set to the IP address where JTmap
 is running (if it's the same machine, use the local loopback interface: 127.0.0.1).

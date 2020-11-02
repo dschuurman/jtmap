@@ -146,6 +146,9 @@ while True:
     # Use the remote station's gridsquare to get approximate latitude/longitude
     # This will be refined if station is found in an online database.
     gridsquare = qso['GRIDSQUARE']
+    # If no gridsquare was sent from WSJT-X, skip map and loop again (this should be rare)
+    if gridsquare == '':
+        continue
     latitude, longitude = get_latitude_longitude(gridsquare)
 
     # Lookup callsign in an online database
@@ -180,6 +183,7 @@ while True:
             gridsquare = contact['hamdb']['callsign']['grid']
             latitude = float(contact['hamdb']['callsign']['lat'])
             longitude = float(contact['hamdb']['callsign']['lon'])
+    ## TO-DO: Add other open online databases?
 
     logging.info('QSO completed!')
     logging.info('call: {}\nname: {}\nQTH: {}\nGridsquare: {}'.format(callsign,name,qth,gridsquare))
