@@ -11,8 +11,10 @@ Here are instructions for installing these dependencies on Win/OSX/Linux:
 Python ver. 3.x is required. To install dependencies, 
 type the following in a terminal:
 
-`sudo apt install libatlas-base-dev python3-cartopy`
-`pip3 install adif_io geopy matplotlib scipy`
+```
+sudo apt install libatlas-base-dev python3-cartopy
+pip3 install adif_io geopy matplotlib scipy
+```
 
 ---
 ### For OSX
@@ -20,10 +22,12 @@ type the following in a terminal:
 Python ver. 3.x is required. To install dependencies, type the following 
 in a terminal (assuming you are using the brew package manager):
 
-`pip3 install adif_io geopy matplotlib scipy`
-`brew install proj geos`
-`pip3 install cartopy`
-`pip3 install --upgrade certificates`
+```
+pip3 install adif_io geopy matplotlib scipy
+brew install proj geos
+pip3 install cartopy
+pip3 install --upgrade certificates
+```
 
 ---
 ### For Windows
@@ -36,8 +40,8 @@ Open a terminal window and at the command prompt, type the following:
 
 `pip3 install adif_io geopy matplotlib scipy`
 
-NOTE: Unfortunately, it seems cartopy has had some issues installing on Windows...
-If this is the case, one could try installing these dependencies using Anaconda.
+*NOTE: Unfortunately, it seems cartopy has had some issues installing on Windows...
+If this is the case, one could try installing these dependencies using Anaconda.*
 
 ---
 
