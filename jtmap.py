@@ -17,7 +17,7 @@ import socket
 import adif_io
 import geopy.distance
 import configparser
-import datetime, time
+import datetime
 import cartopy.crs as ccrs
 from cartopy.feature.nightshade import Nightshade
 import cartopy.feature
@@ -27,15 +27,52 @@ from select import select
 
 VERSION=0.9
 
+### Function definitions
+
 def get_latitude_longitude(gridsquare):
-    ''' Converts four character gridsquare to latitude,longitude
+    ''' Converts four character gridsquare to latitude,longitude at center of gridsquare
     '''
     longitude = -180.0 + (ord(gridsquare[0]) - ord('A')) * 20.0
     latitude = -90.0 + (ord(gridsquare[1]) - ord('A')) * 10.0
     longitude += float(gridsquare[2]) * 2.0
     latitude += float(gridsquare[3])
+    longitude += 1.0
+    latitude += 0.5
 
     return latitude, longitude
+
+def compute_distance(location1, location2, units):
+    ''' Computes distance between two latitude/longitude coordinates
+        returns distnace in specified units
+    '''
+    global DISTANCE_UNITS
+    if units == 'kilometers' or units == 'km':
+        distance = geopy.distance.distance(location1, location2).kilometers
+        units = 'km'
+        logging.info("distance: {:.0f} km\n\n".format(distance))
+    else:
+        distance = geopy.distance.distance(location1, location2).miles
+        units = 'miles'
+        logging.info("distance: {:.0f} miles\n\n".format(distance))
+    return distance
+
+def create_GUI():
+    ''' Create a main GUI window with a quit button to terminate program
+    '''
+    window = tk.Tk()
+    window.title("JTmap")
+    title = tk.Label(text="JTmap",font=("Arial Bold", 20))
+    title.pack()
+    info = tk.Label(text="by W8DCS version {:.2f}".format(VERSION),font=("Arial", 10))
+    info.pack()
+    status = tk.Label(text="Waiting for contacts from WSJT-X...",font=("Arial", 12))
+    status.pack()
+
+    # creatw a quit button
+    button = tk.Button(master=window, text='Quit', command=lambda: os._exit(0))
+    button.pack(side=tk.BOTTOM)
+
+    return window
 
 # Read other constants from configuration file
 # This file is assumed to be in the same folder as the program
@@ -59,14 +96,13 @@ if conf.has_option('jtmap','LONGITUDE'):
 else:
     my_longitude = None
 WEB_LOOKUP = conf.get('jtmap','WEB_LOOKUP')
-logging.info('Using lookup database: {}'.format(WEB_LOOKUP))
 LOGGING = conf.get('jtmap','LOG_LEVEL')
 if conf.has_option('jtmap','DISTANCE_UNITS'):
     DISTANCE_UNITS = conf.get('jtmap','DISTANCE_UNITS')
 else:
-    DISTANCE_UNITS = 'miles'
+    DISTANCE_UNITS = 'miles'  # Show miles by default
 
-# Set logging level
+# Set logging level; default to reporting errors only
 if LOGGING == 'debug':
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 elif LOGGING == 'info':
@@ -74,7 +110,7 @@ elif LOGGING == 'info':
 else:
     logging.basicConfig(stream=sys.stderr, level=logging.ERROR)
 
-# Disable annoying font messages
+# Disable annoying font warning messages
 logging.getLogger('matplotlib.font_manager').disabled = True
 
 # Create UDP server socket for listening to WSJT-X
@@ -83,19 +119,8 @@ server.bind((UDP_IP, UDP_PORT))
 server.setblocking(False)
 logging.info('listening on {}:{}'.format(UDP_IP, UDP_PORT))
 
-# main window with message and quit button
-window = tk.Tk()
-window.title("JTmap")
-title = tk.Label(text="JTmap",font=("Arial Bold", 20))
-title.pack()
-info = tk.Label(text="by W8DCS version {:.2f}".format(VERSION),font=("Arial", 10))
-info.pack()
-status = tk.Label(text="Waiting for contacts from WSJT-X...",font=("Arial", 12))
-status.pack()
-
-# creating a button instance
-button = tk.Button(master=window, text='Quit', command=lambda: os._exit(0))
-button.pack(side=tk.BOTTOM)
+# create main window with a quit button to terminate
+window = create_GUI()
 
 while True:
     # Loop to wait for a UDP packet; service figure event loop while waiting
@@ -116,15 +141,15 @@ while True:
         # Update tkinter GUI (run this periodically rather than using a blocking mainloop)
         window.update()
 
-    # Proceed only if a QSO is completed (indicated by byte in header)
+    # Proceed only if a QSO is completed (indicated by byte 12 in header)
     if data[11] != 0x0c:
         continue
-    
+
     # Parse completed QSO and extract ADIF payload
     header = data[:16]
     adif = data[26:].decode('utf-8')
-    logging.debug("WSJT-X header:", header)
-    logging.debug("WSJT-X ADIF payload:", adif)
+    logging.info('QSO completed!')
+    logging.debug("WSJT-X header: {}\nWSJT-X ADIF payload: {}".format(header, adif))
 
     # Parse ADIF data
     qsos, header =  adif_io.read_from_string(adif)
@@ -140,19 +165,18 @@ while True:
     if my_latitude == None:
         my_gridsquare = qso['MY_GRIDSQUARE']
         my_latitude, my_longitude = get_latitude_longitude(my_gridsquare)
-        my_longitude += 0.5
-        my_latitude += 1.0
     
     # Use the remote station's gridsquare to get approximate latitude/longitude
-    # This will be refined if station is found in an online database.
+    # This will be refined if the station is found in an online database.
     gridsquare = qso['GRIDSQUARE']
+    
     # If no gridsquare was sent from WSJT-X, skip map and loop again (this should be rare)
     if gridsquare == '':
         continue
     latitude, longitude = get_latitude_longitude(gridsquare)
 
     # Lookup callsign in an online database
-    logging.info('Looking up: '+callsign)
+    logging.info('Looking up: {} using {}'.format(callsign,WEB_LOOKUP))
     if WEB_LOOKUP == "callbook.info":
         response = urllib.request.urlopen('http://callook.info/{}/json'.format(callsign))
         json_data = response.read().decode("utf-8")
@@ -183,23 +207,14 @@ while True:
             gridsquare = contact['hamdb']['callsign']['grid']
             latitude = float(contact['hamdb']['callsign']['lat'])
             longitude = float(contact['hamdb']['callsign']['lon'])
-    ## TO-DO: Add other open online databases?
-
-    logging.info('QSO completed!')
+    
+    ## TO-DO: Add support for other open online databases?
     logging.info('call: {}\nname: {}\nQTH: {}\nGridsquare: {}'.format(callsign,name,qth,gridsquare))
 
-    # TO-DO: check units for distance between stations
-    if DISTANCE_UNITS == 'kilometers' or DISTANCE_UNITS == 'km':
-        distance = geopy.distance.distance((latitude, longitude), (my_latitude,my_longitude)).kilometers
-        units = 'km'
-        logging.info("distance: {:.0f} km\n\n".format(distance))
-    else:
-        distance = geopy.distance.distance((latitude, longitude), (my_latitude,my_longitude)).miles
-        units = 'miles'
-        logging.info("distance: {:.0f} miles\n\n".format(distance))
+    # Compute distance of contact
+    distance = compute_distance((my_latitude,my_longitude), (latitude, longitude), DISTANCE_UNITS)
 
     # Plot communication on a map
-
     # close the current plot and create a new figure
     plt.close()
     fig = plt.figure()
@@ -214,14 +229,18 @@ while True:
     # Zoom in on region of interest on map
     ax.set_extent([min(longitude,my_longitude)-5, max(longitude,my_longitude)+5, min(latitude,my_latitude)-5, max(latitude,my_latitude)+5],crs=ccrs.PlateCarree())
 
+    # Add map features
     ax.add_feature(cartopy.feature.OCEAN)
     ax.add_feature(cartopy.feature.LAND, edgecolor='black')
     ax.add_feature(cartopy.feature.LAKES, edgecolor='black')
     ax.add_feature(Nightshade(datetime.datetime.utcnow(), alpha=0.2))
 
-    # show contact details in the text box if it was found in database
+    # show contact details in a text box if it was found in database
     if name != None:
-        contact_details = 'call: {}\nname: {}\n{}\ndistance: {:.0f} {}'.format(callsign,name,qth,distance,units)
+        contact_details = 'call: {}\nname: {}\n{}\ndistance: {:.0f} {}'.format(callsign, name, qth, distance, DISTANCE_UNITS)
+        plt.figtext(0.5, 0.00, contact_details, ha="center", fontsize=12, bbox={"facecolor":"white", 'edgecolor':'none', "alpha":0.5, "pad":5})
+    else:  # otherwise show basic information
+        contact_details = 'call: {}\ndistance: {:.0f} {}'.format(callsign, distance, DISTANCE_UNITS)
         plt.figtext(0.5, 0.00, contact_details, ha="center", fontsize=12, bbox={"facecolor":"white", 'edgecolor':'none', "alpha":0.5, "pad":5})
 
     at_x, at_y = ax.projection.transform_point(my_longitude, my_latitude, src_crs=ccrs.PlateCarree())
@@ -238,5 +257,4 @@ while True:
     fig.canvas.draw()
     fig.tight_layout()
  
-    #plt.ioff()   # Turning interactive mode off
     plt.show(block = False)
