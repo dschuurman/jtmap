@@ -1,15 +1,16 @@
-# jtmap
-A program that listens for information sent from WSJT-X and shows a friendly map with information after each contact is confirmed.
+# JTmap
+A program that listens for information sent from [WSJT-X](http://physics.princeton.edu/pulsar/K1JT/wsjtx.html)
+and shows a friendly map with information after each contact is confirmed.
 
 ## Installation
 This program requires python ver. 3.x along with a few dependencies. 
-Here are instructions for installing these dependencies on Win/OSX/Linux:
+Here are instructions for installing these dependencies on Windows/OSX/Linux:
 
 ---
 ### For Linux
 
-Python version 3.x is required. To install dependencies, 
-type the following in a terminal:
+Python version 3.x is required (tested using Python 3.8.x under Ubuntu 20.04).
+To install dependencies, type the following in a terminal:
 
 ```
 sudo apt install libatlas-base-dev python3-cartopy
@@ -20,7 +21,7 @@ pip3 install adif_io geopy matplotlib scipy
 ### For OSX
 
 Python ver. 3.x is required. To install dependencies, type the following 
-in a terminal (assuming you are using the brew package manager):
+in a terminal (assuming you are using the Homebrew package manager):
 
 ```
 pip3 install adif_io geopy matplotlib scipy
@@ -32,13 +33,13 @@ pip3 install --upgrade certificates
 ---
 ### For Windows
 
-*NOTE: Unfortunately, it seems cartopy has had some issues installing on Windows
-which will prevent JTmap from working with Windows till this is resolved... 
+*NOTE: Unfortunately, it seems the cartopy package has had some issues installing on Windows
+which will prevent JTmap from working with Windows until this is resolved... 
 However, it may be possible to install these dependencies using Anaconda (not tested).*
 
-First, download Python ver. 3.x
+First, download and install Python ver. 3.x.
 Be sure to click "Add Python to PATH" during install so it can be
-used easily run in a terminal window.
+easily run in a terminal window.
 
 Open a terminal window and at the command prompt, type the following:
 
@@ -46,7 +47,7 @@ Open a terminal window and at the command prompt, type the following:
 
 ---
 
-## Setup
+### Downloading and running
 
 To download the program folder from guthub, use the following command line:
 
@@ -60,7 +61,7 @@ python3 jtmap.py
 ```
 
 Note that `jtmap.py` and `jtmap.conf` should be placed in the same folder.
-The jtmap.conf file contains configuration information that should be setup before
+The `jtmap.conf` file contains configuration information that should be setup before
 launching the program (if unsure, it should work "out of the box" using the defaults).
 
 Configure WSJT-X so that the UDP server is set to the IP address where JTmap
