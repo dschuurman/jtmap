@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 import tkinter as tk
 from select import select
 
-VERSION=0.91
+VERSION=0.92
 
 ### Function definitions
 
@@ -77,20 +77,18 @@ def lookup_callsign(callsign, database):
         Returns a dictionary with contact details
         TO-DO: Add support for other open online databases?
     '''
-    # Initialize a dictionary to store data
-    contact = {'call':callsign, 'name':'','qth':'','gridsquare':'','latitude':0.0,'longitude':0.0}
+    # Initialize a dictionary to store contact data
+    contact = {'callsign':callsign, 'name':'','qth':'','gridsquare':'','latitude':0.0,'longitude':0.0}
 
     logging.info('Looking up: {} using {}'.format(callsign,database))
     if database == "callbook.info":
         response = urllib.request.urlopen('http://callook.info/{}/json'.format(callsign))
-        json_data = response.read().decode('utf-8')
-        logging.debug('JSON: ',json_data)
+        json_data = response.read()   #.decode('utf-8')
         data = json.loads(json_data)
         if data['status'] == 'INVALID':
             logging.info('callsign {} not found in {}.'.format(callsign,database))
             contact = None
         else:
-            contact['callsign'] = data['current']['callsign']
             contact['name'] = data['name']
             contact['qth'] = data['address']['line2']
             contact['gridsquare'] = data['location']['gridsquare']
@@ -98,19 +96,19 @@ def lookup_callsign(callsign, database):
             contact['longitude'] = float(data['location']['longitude'])
     elif database == "hamdb.org":
         response = urllib.request.urlopen('http://api.hamdb.org/{}/json/JTmap'.format(callsign))
-        json_data = response.read().decode("utf-8") 
-        logging.debug('JSON:',json_data)
+        json_data = response.read()  #.decode("utf-8") 
         data = json.loads(json_data)
         if data['hamdb']['callsign']['call'] == 'NOT_FOUND':
             logging.info('callsign {} not found in {}.'.format(callsign,database))
             contact = None
         else:  # Get contact details and a more accurate latitute/longitude
-            contact['callsign'] = data['hamdb']['callsign']['call']
             contact['name'] = data['hamdb']['callsign']['fname'] + ' ' + data['hamdb']['callsign']['name']
             contact['qth'] = data['hamdb']['callsign']['addr2'] + ', ' + data['hamdb']['callsign']['state'] + ', ' + data['hamdb']['callsign']['country']
-            contact['gridsquare'] = data['hamdb']['callsign']['grid']
-            contact['latitude'] = float(data['hamdb']['callsign']['lat'])
-            contact['longitude'] = float(data['hamdb']['callsign']['lon'])
+            if data['hamdb']['callsign']['grid'] != 'Unknown':
+                contact['gridsquare'] = data['hamdb']['callsign']['grid']
+            if data['hamdb']['callsign']['lat']!='':
+                contact['latitude'] = float(data['hamdb']['callsign']['lat'])
+                contact['longitude'] = float(data['hamdb']['callsign']['lon'])
     else:
         contact = None
     
@@ -122,7 +120,8 @@ def lookup_callsign(callsign, database):
 # Read other constants from configuration file
 # This file is assumed to be in the same folder as the program
 conf = configparser.ConfigParser()
-conf.read('jtmap.conf')
+if conf.read('jtmap.conf') == []:
+    print('jtmap.cong file missing - please place it in the same folder as the program.')
 
 # If localhost is selected, then bind to local loopback only
 if conf.getboolean('jtmap','LOCALHOST'):
@@ -204,26 +203,31 @@ while True:
     # Extract call from ADIF data
     callsign = qso['CALL']
     my_callsign = qso['STATION_CALLSIGN']
+    gridsquare = qso['GRIDSQUARE']
+    my_gridsquare = qso['MY_GRIDSQUARE']
     
     # If no home station latitude/longitude was specified in conf file, 
     # use center of my_gridsquare reported in WSJT-X to approximate my latitude/longitude
     if my_latitude == None:
-        my_gridsquare = qso['MY_GRIDSQUARE']
         my_latitude, my_longitude = get_latitude_longitude(my_gridsquare)
 
     # Lookup callsign information in an online database
     contact = lookup_callsign(callsign, WEB_LOOKUP)
 
-    # If online database returns nothing, use data available from WSJT-X
-    # Use remote station's gridsquare to get approximate latitude/longitude
+    # If online database returns nothing, just use data available from WSJT-X
     if contact == None:
-        gridsquare = qso['GRIDSQUARE']
-        # If no gridsquare was sent from WSJT-X and no lookup data, then skip map and loop again (this should be rare)
-        if gridsquare == '':
-            continue
-        # Initialize a dictionary to store data
+        # Initialize a dictionary with the basic data we know from WSJT-X
+        contact = {'callsign':callsign, 'name':'', 'qth':'', 'gridsquare':gridsquare, 'latitude':0.0, 'longitude':0.0}
+
+    # If no latitude/longitude set, use station's gridsquare to get approximate latitude/longitude
+    if gridsquare != '' and contact['latitude'] == 0.0 and contact['longitude'] == 0.0:
         latitude, longitude = get_latitude_longitude(gridsquare)
-        contact = {'callsign':callsign, 'name':'', 'qth':'', 'gridsquare':gridsquare, 'latitude':latitude, 'longitude':longitude}
+        contact['latitude'] = latitude
+        contact['longitude'] = longitude
+
+    # If there is no position information available at this point, skip map and loop again (this should be rare)
+    if contact['latitude'] == 0.0 and contact['longitude'] == 0.0:
+        continue
 
     # Compute distance of contact
     distance = compute_distance((my_latitude,my_longitude), (contact['latitude'], contact['longitude']), DISTANCE_UNITS)
@@ -264,8 +268,7 @@ while True:
     at_x, at_y = ax.projection.transform_point(contact['longitude'], contact['latitude'], src_crs=ccrs.PlateCarree())
     plt.annotate(callsign, xy=(at_x, at_y), color='green', ha='right', fontweight='bold')
 
-    plt.plot([my_longitude, contact['longitude']], [my_latitude, contact['latitude']],
-             color='blue', linewidth=2, marker='o', transform=ccrs.Geodetic())
+    plt.plot([my_longitude, contact['longitude']], [my_latitude, contact['latitude']], color='blue', linewidth=2, marker='o', transform=ccrs.Geodetic())
 
     # This will draw and fit things nicely in the window
     # Note: tight_layout() must be called after draw()
