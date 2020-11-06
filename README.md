@@ -58,9 +58,9 @@ To run the program from the terminal, change directories into the program folder
 ---
 ### For Windows
 
-Download the JTmap program from guthub (downloadng using zip may be easiest) and extract the files into local folder.
+Download the JTmap program from guthub (downloading using zip may be easiest) and extract the files into a local folder.
 
-Next, download and install [Python version 3.x](https://www.python.org/downloads/windows/). Select "Add Python to PATH" during installation.
+Next, download and install [Python version 3.8.x](https://www.python.org/downloads/windows/). Select "Add Python to PATH" during installation.
 
 Next, download and install [miniconda](https://docs.conda.io/en/latest/miniconda.html). Select "Add miniconda to my PATH" during installation so it can be easily run in a terminal window.
 
@@ -71,7 +71,7 @@ conda install -c conda-forge cartopy
 pip install adif_io geopy
 ```
 
-Once these dependencies are installed, open a terminal window. Change directories into your jtmap folder and run the program as follows:
+Once these dependencies are installed, open a terminal window, change directories into the local jtmap folder, and run the program as follows:
 
 `python jtmap.py`
 
@@ -84,11 +84,12 @@ You should now be able to double-click on the `pymap.bat` file to launch the pro
 ### Configuring WSJT-X
 
 Configure WSJT-X so that the UDP server is set to the IP address where JTmap
-is running (if it's the same machine, use the default which is the local loopback interface: 127.0.0.1).
-Launch JTmap and start WSJT-X then wait for contacts to be displayed in a pop-up
-window showing a map of the contact.
-
-Note that `jtmap.py` and `jtmap.conf` should be kept in the same folder.
-The `jtmap.conf` file contains configuration information that should be setup before
+is running. If JTmap and WSJT-X are running on the the same machine, WSJT-X should have the UDP 
+server configured to the loopback interface (`127.0.0.1`, which it the default) and 
+the `jtmap.conf` file should be set with `LOCALHOST = yes` (which is the default configuration).
+If WSJT-X and JTmap are running on different machines, set the IP address and `LOCALHOST` settings
+accordingly. The `jtmap.conf` file contains additional configuration information that may be setup before
 launching the program (if unsure, it should work "out of the box" using the defaults).
 
+Launch JTmap and start WSJT-X then wait for contacts to be displayed in a pop-up
+window showing a map of the contact.
