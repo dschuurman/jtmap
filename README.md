@@ -1,5 +1,5 @@
 # JTmap
-A program is a companion program for [WSJT-X](http://physics.princeton.edu/pulsar/K1JT/wsjtx.html)
+A companion program for [WSJT-X](http://physics.princeton.edu/pulsar/K1JT/wsjtx.html)
 that listens for information and displays a friendly map with additional information after each contact is confirmed.
 
 ## Installing and running JTmap
@@ -13,7 +13,7 @@ To download the program folder from guthub, use the following command line:
 
 `git clone https://github.com/dschuurman/jtmap.git`
 
-Note that if git is not already installed, it can be installed using the following command:
+Note that if `git` is not already installed, it can be installed using the following command:
 
 `sudo apt install git`
 
