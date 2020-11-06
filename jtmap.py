@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 import tkinter as tk
 from select import select
 
-VERSION=0.92
+VERSION=0.93
 
 ### Function definitions
 
@@ -82,7 +82,10 @@ def lookup_callsign(callsign, database):
 
     logging.info('Looking up: {} using {}'.format(callsign,database))
     if database == "callbook.info":
-        response = urllib.request.urlopen('http://callook.info/{}/json'.format(callsign))
+        try:
+            response = urllib.request.urlopen('http://callook.info/{}/json'.format(callsign))
+        except:
+            return None
         json_data = response.read()   #.decode('utf-8')
         data = json.loads(json_data)
         if data['status'] == 'INVALID':
@@ -95,7 +98,10 @@ def lookup_callsign(callsign, database):
             contact['latitude'] = float(data['location']['latitude'])
             contact['longitude'] = float(data['location']['longitude'])
     elif database == "hamdb.org":
-        response = urllib.request.urlopen('http://api.hamdb.org/{}/json/JTmap'.format(callsign))
+        try:
+            response = urllib.request.urlopen('http://api.hamdb.org/{}/json/JTmap'.format(callsign))
+        except:
+            return None
         json_data = response.read()  #.decode("utf-8") 
         data = json.loads(json_data)
         if data['hamdb']['callsign']['call'] == 'NOT_FOUND':
