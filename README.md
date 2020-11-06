@@ -1,6 +1,6 @@
 # JTmap
-A program that listens for information sent from [WSJT-X](http://physics.princeton.edu/pulsar/K1JT/wsjtx.html)
-and displays a friendly map with additional information after each contact is confirmed.
+A program is a companion program for [WSJT-X](http://physics.princeton.edu/pulsar/K1JT/wsjtx.html)
+that listens for information and displays a friendly map with additional information after each contact is confirmed.
 
 ## Installing and running JTmap
 The program requires python ver. 3.x. Before running the program a few dependencies need to be installed.
@@ -85,8 +85,8 @@ You should now be able to double-click on the `pymap.bat` file to launch the pro
 
 Configure WSJT-X so that the UDP server is set to the IP address where JTmap
 is running. If JTmap and WSJT-X are running on the the same machine, WSJT-X should have the UDP 
-server configured to the loopback interface (`127.0.0.1`, which it the default) and 
-the `jtmap.conf` file should be set with `LOCALHOST = yes` (which is the default configuration).
+server configured to the loopback interface (`127.0.0.1`, which is the default) and 
+the `jtmap.conf` file should be set with `LOCALHOST = yes` (which is the default).
 If WSJT-X and JTmap are running on different machines, set the IP address and `LOCALHOST` settings
 accordingly. The `jtmap.conf` file contains additional configuration information that may be setup before
 launching the program (if unsure, it should work "out of the box" using the defaults).
