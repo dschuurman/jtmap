@@ -1,9 +1,11 @@
 # JTmap
 A companion program for [WSJT-X](http://physics.princeton.edu/pulsar/K1JT/wsjtx.html)
 that listens for information and displays a friendly map with additional information after each contact is confirmed.
+The program obtains additional information about each contact by querying an online callsign database
+(online databases supported currently include hamdb.org, callbook.info, and qrz.com).
 
 ## Installing and running JTmap
-The program requires python ver. 3.x. Before running the program a few dependencies need to be installed.
+The program requires python version 3.7 or later. Before running the program a few dependencies need to be installed.
 Here are instructions for installing these dependencies and running on Windows/OSX/Linux:
 
 ---
@@ -17,7 +19,7 @@ Note that if `git` is not already installed, it can be installed using the follo
 
 `sudo apt install git`
 
-Python version 3.x is required (tested using Python 3.8.x under Ubuntu 20.04).
+Python version 3.7 or later is required (tested using Python 3.x under Ubuntu 20.04).
 This should be installed by default in most modern Linux distros.
 
 To install the required dependencies, type the following in a terminal:
@@ -42,7 +44,7 @@ Note that if git is not already installed, install it using the following comman
 
 `brew install git`
 
-Python ver. 3.x is required. To install dependencies, type the following in a terminal:
+Python ver. 3.7 or later is required. To install dependencies, type the following in a terminal:
 
 ```
 pip3 install adif_io geopy matplotlib scipy
@@ -84,12 +86,19 @@ You should now be able to double-click on the `pymap.bat` file to launch the pro
 ### Configuring WSJT-X
 
 Configure WSJT-X so that the UDP server is set to the IP address where JTmap
-is running. If JTmap and WSJT-X are running on the the same machine, WSJT-X should have the UDP 
+is running. If JTmap and WSJT-X are running on the same machine, WSJT-X should have the UDP 
 server configured to the loopback interface (`127.0.0.1`, which is the default) and 
 the `jtmap.conf` file should be set with `LOCALHOST = yes` (which is the default).
-If WSJT-X and JTmap are running on different machines, set the IP address and `LOCALHOST` settings
-accordingly. The `jtmap.conf` file contains additional configuration information that may be setup before
-launching the program (if unsure, it should work "out of the box" using the defaults).
+If WSJT-X and JTmap are running on different machines, set the IP address in WSJT-X
+and the `LOCALHOST` setting in `jtmap.conf` accordingly. 
 
-Launch JTmap and start WSJT-X then wait for contacts to be displayed in a pop-up
+The `jtmap.conf` file contains additional configuration information that may be configured before
+launching the program (if unsure, it should work "out of the box" using the defaults).
+You may specify a precise latitude and longitude for your QTH which will be used for more
+precise distance calculations (by default, distances are computed using your gridsquare).
+
+Note that if you configure QRZ.com for callsign lookups, you will need to enter your QRZ.com
+username and password in `jtmap.conf` since QRZ.com cannot be used anonymously.
+
+One setup is compelte, launch JTmap and start WSJT-X then wait for contacts to be displayed in a pop-up
 window showing a map of the contact.
