@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 import tkinter as tk
 from select import select
 
-VERSION=0.93
+VERSION=0.94
 
 ### Function definitions
 
@@ -77,17 +77,18 @@ def lookup_callsign(callsign, database, user='', pwd=''):
     ''' Lookup callsign in an online database 
         Optional parameters may be required if database requires a username and password
         Returns a dictionary with contact details
-        TO-DO: Add support for additional open online databases?
+        TO-DO: Add support for additional online databases?
     '''
     # Initialize a dictionary to store contact data
     contact = {'callsign':callsign, 'name':'','qth':'','gridsquare':'','latitude':0.0,'longitude':0.0}
 
     logging.info('Looking up: {} using {}'.format(callsign,database))
     # CALLBOOK.info
-    if database == "callbook.info":
+    if database == 'callbook.info':
         try:
             response = urllib.request.urlopen('http://callook.info/{}/json'.format(callsign))
         except:
+            logging.error('No session key response from callbook.info')
             return None
         json_data = response.read()   #.decode('utf-8')
         data = json.loads(json_data)
@@ -101,10 +102,11 @@ def lookup_callsign(callsign, database, user='', pwd=''):
             contact['latitude'] = float(data['location']['latitude'])
             contact['longitude'] = float(data['location']['longitude'])
     # HAMDB.org
-    elif database == "hamdb.org":
+    elif database == 'hamdb.org':
         try:
             response = urllib.request.urlopen('http://api.hamdb.org/{}/json/JTmap'.format(callsign))
         except:
+            logging.error('No session key response from hamdb.org')
             return None
         json_data = response.read()  #.decode("utf-8") 
         data = json.loads(json_data)
@@ -120,7 +122,7 @@ def lookup_callsign(callsign, database, user='', pwd=''):
                 contact['latitude'] = float(data['hamdb']['callsign']['lat'])
                 contact['longitude'] = float(data['hamdb']['callsign']['lon'])
     # QRZ.com
-    elif database == "qrz.com":
+    elif database == 'qrz.com':
         # If this is the first query then request a session key
         # Note: session key should last 24 hours (however, specs say this is not guaranteed)
         if not hasattr(lookup_callsign, "session"):
@@ -129,46 +131,47 @@ def lookup_callsign(callsign, database, user='', pwd=''):
                 root = ET.fromstring(response.read())
                 key = root.find('.//{http://xmldata.qrz.com}Key')
                 if key == None:
-                    logging.info('Session key not received from {}.'.format(database))
+                    logging.info('Session key not received from QRZ.com')
                     return None
-                logging.info('Session key obtained from {}.'.format(database))
+                logging.info('Session key obtained from QRZ.com')
                 lookup_callsign.session = key.text
             except:
-                logging.info('No session key response from {}.'.format(database))
+                logging.error('No session key response from QRZ.com')
                 return None
         # Send query using saved session key
         try:
             response = urllib.request.urlopen('http://xmldata.qrz.com/xml/current/?s={};callsign={}'.format(lookup_callsign.session,callsign))
         except:
+            logging.info('No reply from QRZ.com')
             return None
         data = response.read()
-        logging.info('{} replies with: {}.'.format(database,data))
+        logging.info('QRZ reply: {}.'.format(data))
         root = ET.fromstring(data)
         # Check for error(s)
         error = root.find('.//{http://xmldata.qrz.com}Error')
         if error != None:
-            logging.info('{} returned error: {}'.format(database,error.text))
+            logging.info('QRZ returned error: {}'.format(error.text))
             if error.text == 'Session Timeout':
                 # if session key is invalid, delete it so a new one will be requested on next call
                 del lookup_callsign.session
             return None
         # If no errors, get information returned
-        name = root.find('.//{http://xmldata.qrz.com}name').text
         fname = root.find('.//{http://xmldata.qrz.com}fname')
-        if fname != None:
-            contact['name'] = fname.text + ' ' + name
-        else:
-            contact['name'] = name
+        name = root.find('.//{http://xmldata.qrz.com}name')
+        if fname != None and name != None:
+            contact['name'] = fname.text + ' ' + name.text
+        elif fname != None and name == None:
+            contact['name'] = fname.text
+        elif fname == None and name != None:
+            contact['name'] = name.text
         address = root.find('.//{http://xmldata.qrz.com}addr2')
         if address != None:
             contact['qth'] = address.text
-        else:
-            contact['qth'] = ''
         state = root.find('.//{http://xmldata.qrz.com}state')
         if state != None:
             contact['qth'] += ', ' + state.text
         country = root.find('.//{http://xmldata.qrz.com}country')
-        if state != None:
+        if country != None:
             contact['qth'] += ' ' + country.text
         # That's all - more information requires a subscription with qrz.com
     else:
@@ -183,13 +186,13 @@ def lookup_callsign(callsign, database, user='', pwd=''):
 # Read constants from configuration file (assumed to be in the same folder as the program)
 conf = configparser.ConfigParser()
 if conf.read('jtmap.conf') == []:
-    print('jtmap.conf file missing... please place it in the same folder as the program.')
+    logging.error('jtmap.conf file missing... please place it in the same folder as the program.')
 
 # If localhost is selected, then bind to local loopback only
 if conf.getboolean('jtmap','LOCALHOST'):
     UDP_IP = "127.0.0.1"
-else:
-    UDP_IP = "0.0.0.0"   # otherwise bind to all local ports
+else:   # otherwise bind to all local ports
+    UDP_IP = "0.0.0.0"
 UDP_PORT = conf.getint('jtmap','PORT')
 
 # Use latitude/longitude of present, otherwise use gridsquare reported in WSJT-X
@@ -298,6 +301,7 @@ while True:
 
     # If there is still no position information available at this point, skip map and loop again (this should be rare)
     if contact['latitude'] == 0.0 and contact['longitude'] == 0.0:
+        logging.info('No position or gridsquare info available - no map plotted.')
         continue
 
     # Compute distance of contact

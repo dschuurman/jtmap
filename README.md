@@ -4,6 +4,8 @@ that listens for information and displays a friendly map with additional informa
 The program obtains additional information about each contact by querying an online callsign database
 (online databases supported currently include hamdb.org, callbook.info, and qrz.com).
 
+![Image of JTmap](https://sites.calvin.edu/derek/ham/jtmap-screenshot.png)
+
 ## Installing and running JTmap
 The program requires python version 3.7 or later. Before running the program a few dependencies need to be installed.
 Here are instructions for installing these dependencies and running on Windows/OSX/Linux:
