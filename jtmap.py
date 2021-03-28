@@ -346,8 +346,6 @@ while True:
     plt.plot([my_longitude, contact['longitude']], [my_latitude, contact['latitude']], color='blue', linewidth=2, marker='o', transform=ccrs.Geodetic())
 
     # This will draw and fit things nicely in the window
-    # Note: tight_layout() must be called after draw()
-    fig.canvas.draw()
     fig.tight_layout()
  
     plt.show(block = False)
