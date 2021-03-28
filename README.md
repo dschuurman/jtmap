@@ -27,7 +27,7 @@ This should be installed by default in most modern Linux distros.
 To install the required dependencies, type the following in a terminal:
 
 ```
-sudo apt install libatlas-base-dev python3-cartopy
+sudo apt install libatlas-base-dev python3-cartopy python3-gi-cairo
 pip3 install adif_io geopy matplotlib scipy
 ```
 To run the program from the terminal, change directories into the program folder and type:
